@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Octopus Gold Trader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --accent-gold: #fbbf24;
+            --octopus-body: #ff4757;
+            --octopus-shadow: #c21d3a;
+            --octopus-highlight: #ff8e99;
+            --btn-up: #22c55e;
+            --btn-up-dark: #166534;
+            --btn-up-light: #4ade80;
+            --btn-down: #ef4444;
+            --btn-down-dark: #991b1b;
+            --btn-down-light: #f87171;
+            --text-muted: #94a3b8;
+            --pixel-size: 6px;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 0;
+            /* Force pixelated rendering for a retro look */
+            image-rendering: pixelated; 
+        }
+
+        /* --- Loading / Error Overlay --- */
+        #loading-overlay, #error-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .hidden { display: none !important; }
+
+        /* --- Improved Pixel Art Octopus --- */
+        .pixel-art-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+            padding-top: 10px;
+        }
+
+        .pixel-octopus {
+            width: var(--pixel-size);
+            height: var(--pixel-size);
+            background: transparent;
+            color: var(--octopus-body); 
+            position: relative;
+            box-shadow: 
+                24px 0, 30px 0, 36px 0, 42px 0,
+                18px 6px, 24px 6px, 30px 6px, 36px 6px, 42px 6px, 48px 6px,
+                12px 12px, 18px 12px, 24px 12px, 30px 12px, 36px 12px, 42px 12px, 48px 12px, 54px 12px,
+                6px 18px, 12px 18px, 24px 18px, 30px 18px, 36px 18px, 42px 18px, 54px 18px, 60px 18px,
+                6px 24px, 12px 24px, 18px 24px, 24px 24px, 30px 24px, 36px 24px, 42px 24px, 48px 24px, 54px 24px, 60px 24px,
+                12px 30px, 18px 30px, 24px 30px, 30px 30px, 36px 30px, 42px 30px, 48px 30px, 54px 30px,
+                6px 36px, 12px 36px, 24px 36px, 30px 36px, 36px 36px, 42px 36px, 54px 36px, 60px 36px,
+                0px 42px, 6px 42px, 18px 42px, 24px 42px, 42px 42px, 48px 42px, 60px 42px, 66px 42px,
+                -6px 36px, 18px 36px, 48px 36px, 72px 36px;
+        }
+
+        .pixel-octopus::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: var(--pixel-size); height: var(--pixel-size);
+            background: white;
+            box-shadow: 18px 18px 0 0 white, 48px 18px 0 0 white;
+        }
+
+        .pixel-octopus::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: var(--pixel-size); height: var(--pixel-size);
+            background: var(--octopus-highlight);
+            box-shadow: 24px 6px, 18px 12px;
+            z-index: 2;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* --- Main UI Card --- */
+        .game-card {
+            background-color: var(--card-bg);
+            /* Use box-shadow for pixel border effect */
+            box-shadow: 
+                0 0 0 4px var(--card-bg),
+                0 0 0 8px black,
+                8px 8px 0 8px rgba(0,0,0,0.5);
+            padding: 8px;
+            max-width: 420px;
+            width: 95%;
+            position: relative;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        .inner-border {
+            background-color: var(--bg-color);
+            /* Inner pixel border */
+            box-shadow: 0 0 0 4px black;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .title-text {
+            color: var(--accent-gold);
+            text-shadow: 2px 2px black;
+            font-size: 18px;
+            margin-bottom: 5px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .user-greeting {
+            font-size: 8px;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        /* Description Box */
+        .info-box {
+            text-align: center;
+            font-size: 8px;
+            color: var(--accent-gold);
+            margin-bottom: 25px;
+            line-height: 1.8;
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            /* Pixel border */
+            box-shadow: 0 0 0 4px black;
+        }
+
+        /* Entry Details Box */
+        .entry-ticket {
+            display: none;
+            width: 100%;
+            background: #000;
+            padding: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px white, 0 0 0 8px black;
+        }
+        
+        .entry-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 8px;
+            border-bottom: 2px dotted #333; /* Thicker dot */
+            padding-bottom: 4px;
+        }
+        .entry-row:last-child { border-bottom: none; margin-bottom: 0; }
+        .entry-label { color: #888; }
+        .entry-value { color: white; }
+        .entry-val-green { color: var(--btn-up-light); }
+        .entry-val-red { color: var(--btn-down-light); }
+
+
+        /* --- Price Screen --- */
+        .screen-container {
+            background: black;
+            width: 100%;
+            margin-bottom: 24px;
+            position: relative;
+            padding: 10px 0;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px #475569, 0 0 0 8px black;
+        }
+        
+        .screen-label {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-gold);
+            color: black;
+            padding: 4px 8px;
+            font-size: 8px;
+            box-shadow: 0 0 0 2px black;
+        }
+
+        /* --- Buttons --- */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px; /* Increased gap */
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .action-btn {
+            height: 70px; /* Taller */
+            font-size: 10px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 1px 1px black;
+            color: white;
+            border: none;
+            
+            /* Pixel button style */
+            box-shadow: 
+                inset -4px -4px 0 0 #1e293b,
+                inset 4px 4px 0 0 #475569,
+                0 0 0 4px black;
+            
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn-up { 
+            background-color: var(--btn-up); 
+            box-shadow: 
+                inset -4px -4px 0 0 var(--btn-up-dark),
+                inset 4px 4px 0 0 var(--btn-up-light),
+                0 0 0 4px black;
+        }
+        
+        .btn-down { 
+            background-color: var(--btn-down); 
+            box-shadow: 
+                inset -4px -4px 0 0 var(--btn-down-dark),
+                inset 4px 4px 0 0 var(--btn-down-light),
+                0 0 0 4px black;
+        }
+
+        .action-btn:active {
+            transform: translateY(4px);
+            /* Darker inner shadow for pressed state */
+            box-shadow: 
+                inset 4px 4px 0 0 #1e293b,
+                inset -4px -4px 0 0 #475569,
+                0 0 0 4px black;
+        }
+
+        .btn-up:active {
+            box-shadow: 
+                inset 4px 4px 0 0 var(--btn-up-dark),
+                inset -4px -4px 0 0 var(--btn-up-light),
+                0 0 0 4px black;
+        }
+        
+        .btn-down:active {
+            box-shadow: 
+                inset 4px 4px 0 0 var(--btn-down-dark),
+                inset -4px -4px 0 0 var(--btn-down-light),
+                0 0 0 4px black;
+        }
+
+        .action-btn.selected {
+            box-shadow: 
+                0 0 0 4px white,
+                0 0 0 8px black;
+            z-index: 2;
+        }
+        
+        .action-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Reset Button (Styled to fit in grid) */
+        .btn-reset-small {
+            width: 100%;
+            background: #334155;
+            color: #94a3b8;
+            font-size: 8px;
+            padding: 12px 0;
+            cursor: pointer;
+            margin-bottom: 15px;
+            text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px black;
+            border: none;
+        }
+        .btn-reset-small:hover { background: #475569; color: white; }
+
+        /* Countdown Timer */
+        .timer-display {
+            font-size: 10px;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 1px 1px black;
+        }
+
+        /* --- Sentiment Bar --- */
+        .sentiment-container {
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            height: 30px;
+            background: #333;
+            overflow: hidden;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px black;
+        }
+
+        .sentiment-bar {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s;
+        }
+
+        .bar-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: black;
+            font-weight: bold;
+            transition: width 1s ease-out;
+            text-shadow: none;
+        }
+
+        .bar-up { background: var(--btn-up-light); width: 50%; }
+        .bar-down { background: var(--btn-down-light); width: 50%; color: white; }
+
+        .sentiment-locked .sentiment-bar { filter: blur(8px); opacity: 0.6; }
+
+        .sentiment-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+            z-index: 5;
+            background: rgba(0,0,0,0.2);
+            text-shadow: 1px 1px black;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sentiment-locked .sentiment-overlay { opacity: 1; }
+
+        /* --- User Stats --- */
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 20px;
+            /* Thicker, pixelated separator */
+            border-top: 4px dotted var(--border-color);
+            padding-top: 15px;
+        }
+
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 8px; color: var(--text-muted); margin-bottom: 5px; }
+        .stat-value { font-size: 12px; color: var(--accent-gold); }
+
+        /* --- Leaderboard --- */
+        .leaderboard-container {
+            width: 100%;
+            border-top: 4px solid black;
+            padding-top: 15px;
+        }
+
+        .tabs { display: flex; margin-bottom: 15px; }
+        .tab-btn {
+            flex: 1;
+            background: #334155;
+            font-size: 8px;
+            padding: 10px;
+            color: #94a3b8;
+            cursor: pointer;
+            /* Pixel border */
+            box-shadow: inset 0 0 0 2px black;
+            border: none;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .tab-btn.active {
+            background: var(--accent-gold);
+            color: black;
+            /* Remove bottom shadow to connect to table */
+            box-shadow: inset 0 2px 0 0 black, inset 2px 0 0 0 black, inset -2px 0 0 0 black;
+            z-index: 2;
+            margin-bottom: -4px;
+        }
+
+        .lb-table {
+            width: 100%;
+            background: #0f172a;
+            font-size: 8px;
+            border-collapse: separate;
+            border-spacing: 0;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px black;
+        }
+
+        .lb-table th {
+            text-align: left;
+            padding: 8px;
+            background: #1e293b;
+            color: var(--accent-gold);
+            /* Pixel border */
+            box-shadow: 0 2px 0 0 black;
+        }
+        .lb-table td { 
+            padding: 8px; 
+            /* Pixel border */
+            box-shadow: 0 2px 0 0 #334155;
+            color: white; 
+        }
+        .lb-table tr:last-child td { 
+            box-shadow: none;
+        }
+        .rank-col { width: 30px; color: #94a3b8; }
+        .score-col { text-align: right; color: var(--btn-up-light); }
+        .my-rank { background: rgba(251, 191, 36, 0.1); }
+
+        /* Status Banner */
+        .status-banner {
+            width: 100%;
+            padding: 8px;
+            text-align: center;
+            font-size: 8px;
+            margin-bottom: 20px;
+            /* Pixel border */
+            box-shadow: 0 0 0 4px black;
+            display: none;
+        }
+        .status-closed { background: #ef4444; color: white; }
+        .status-locked { background: #fbbf24; color: black; }
+
+        /* Loader Animation */
+        .loader {
+            width: 40px; height: 40px;
+            border: 4px solid white;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="loader"></div>
+        <p style="margin-top: 20px; font-size: 10px;">CONNECTING TO OCTOPUS...</p>
+    </div>
+
+    <!-- Error Overlay -->
+    <div id="error-overlay" class="hidden">
+        <h1 style="color: #ef4444; margin-bottom: 20px;">CONNECTION ERROR</h1>
+        <p id="error-message" style="font-size: 10px; max-width: 300px; line-height: 1.5;">Invalid Token</p>
+    </div>
+
+    <!-- Pixel Art Mascot -->
+    <div class="pixel-art-container">
+        <div class="pixel-octopus"></div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="game-card">
+        <div class="inner-border">
+            
+            <h1 class="title-text">OCTOPUS<br>GOLD TRADER</h1>
+            <div id="user-greeting" class="user-greeting">Welcome Trader</div>
+
+            <!-- Market Status Banner -->
+            <div id="status-banner" class="status-banner"></div>
+
+            <!-- Game Description -->
+            <div id="game-desc" class="info-box">
+                <p>PREDICT THE GOLD MARKET (XAUUSD).</p>
+                <p style="margin-top: 8px; color: #94a3b8;">Will it close HIGHER or LOWER today? Guess correctly to earn XP!</p>
+            </div>
+
+            <!-- Entry Ticket -->
+            <div id="entry-ticket" class="entry-ticket">
+                <div class="entry-row">
+                    <span class="entry-label">YOUR PREDICTION</span>
+                    <span id="ticket-dir" class="entry-value">--</span>
+                </div>
+                <div class="entry-row">
+                    <span class="entry-label">ENTRY PRICE</span>
+                    <span id="ticket-price" class="entry-value">--</span>
+                </div>
+                <div class="entry-row">
+                    <span class="entry-label">ENTRY TIME</span>
+                    <span id="ticket-time" class="entry-value">--</span>
+                </div>
+                <div class="entry-row" style="margin-top:4px; padding-top:4px; border-top:2px dashed #555;">
+                    <span class="entry-label">STATUS</span>
+                    <span id="ticket-status" class="entry-value" style="color:var(--accent-gold);">OPEN / WAITING</span>
+                </div>
+            </div>
+
+            <!-- Price Widget -->
+            <div id="price-screen" class="screen-container">
+                <div class="screen-label">XAUUSD PRICE</div>
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+                    {
+                    "symbol": "OANDA:XAUUSD",
+                    "width": "100%",
+                    "colorTheme": "dark",
+                    "isTransparent": true,
+                    "locale": "en"
+                    }
+                    </script>
+                </div>
+            </div>
+
+            <!-- Timer Display -->
+            <div id="timer-display" class="timer-display hidden">TIME LEFT: --:--:--</div>
+
+            <!-- Prediction Buttons -->
+            <div id="vote-buttons" class="btn-grid">
+                <button id="btn-up" onclick="submitVote('up')" class="action-btn btn-up">
+                    <span>▲ PRICE UP</span>
+                    <span style="font-size: 8px; margin-top: 5px;">(BULLISH)</span>
+                </button>
+                <button id="btn-down" onclick="submitVote('down')" class="action-btn btn-down">
+                    <span>▼ PRICE DOWN</span>
+                    <span style="font-size: 8px; margin-top: 5px;">(BEARISH)</span>
+                </button>
+            </div>
+
+            <!-- Change Vote Button (Only visible if voted & before 2pm) -->
+            <button id="btn-change-vote" onclick="resetApp()" class="btn-reset-small hidden">
+                CHANGE PREDICTION
+            </button>
+
+            <!-- Sentiment Bar -->
+            <div id="sentiment-wrapper" class="sentiment-container sentiment-locked">
+                <div class="sentiment-overlay">VOTE TO REVEAL SENTIMENT</div>
+                <div class="sentiment-bar">
+                    <div id="bar-up" class="bar-segment bar-up">50%</div>
+                    <div id="bar-down" class="bar-segment bar-down">50%</div>
+                </div>
+            </div>
+
+            <!-- User Stats -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-label">WEEKLY SCORE</div>
+                    <div class="stat-value" id="user-weekly">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">MONTHLY SCORE</div>
+                    <div class="stat-value" id="user-monthly">--</div>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="leaderboard-container">
+                <div class="tabs">
+                    <button class="tab-btn active" id="tab-weekly" onclick="switchTab('weekly')">TOP 10 WEEKLY</button>
+                    <button class="tab-btn" id="tab-monthly" onclick="switchTab('monthly')">TOP 10 MONTHLY</button>
+                </div>
+                
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">#</th>
+                            <th>PLAYER</th>
+                            <th class="score-col">XP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lb-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- API CONFIGURATION ---
+        const API_BASE = 'https://api.ounce24.com/api';
+        let authToken = null;
+        let currentUser = null;
+
+        // --- DOM Elements ---
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorMessage = document.getElementById('error-message');
+        
+        const btnUp = document.getElementById('btn-up');
+        const btnDown = document.getElementById('btn-down');
+        const sentimentWrapper = document.getElementById('sentiment-wrapper');
+        const barUp = document.getElementById('bar-up');
+        const barDown = document.getElementById('bar-down');
+        const lbBody = document.getElementById('lb-body');
+        const tabWeekly = document.getElementById('tab-weekly');
+        const tabMonthly = document.getElementById('tab-monthly');
+        const userGreeting = document.getElementById('user-greeting');
+        const userWeekly = document.getElementById('user-weekly');
+        const userMonthly = document.getElementById('user-monthly');
+
+        const priceScreen = document.getElementById('price-screen');
+        const voteButtons = document.getElementById('vote-buttons');
+        const statusBanner = document.getElementById('status-banner');
+        const timerDisplay = document.getElementById('timer-display');
+        const btnChangeVote = document.getElementById('btn-change-vote');
+        
+        const gameDesc = document.getElementById('game-desc');
+        const entryTicket = document.getElementById('entry-ticket');
+        const ticketDir = document.getElementById('ticket-dir');
+        const ticketPrice = document.getElementById('ticket-price');
+        const ticketTime = document.getElementById('ticket-time');
+        const ticketStatus = document.getElementById('ticket-status');
+
+        // --- STATE ---
+        let isMarketWeekend = false;
+        let isDailyLock = false; 
+        let hasVoted = false;
+
+        // --- INITIALIZATION ---
+        window.onload = async () => {
+            // 1. Get Token from URL
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
+            if (token) {
+                authToken = token;
+                // Clean URL
+                window.history.replaceState({}, '', window.location.pathname);
+                
+                // Initialize Game
+                try {
+                    await initGame();
+                    // Start Timers
+                    checkMarketStatus();
+                    setInterval(() => {
+                        checkMarketStatus();
+                        updateTimer();
+                    }, 1000);
+                } catch (err) {
+                    showError(err.message || "Failed to initialize game.");
+                }
+            } else {
+                showError("Missing Authorization Token. Please launch from main app.");
+            }
+        };
+
+        // --- API HELPERS ---
+        async function fetchApi(endpoint, options = {}) {
+            const url = `${API_BASE}${endpoint}`;
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            };
+
+            const response = await fetch(url, { ...options, headers });
+            
+            if (response.status === 401 || response.status === 403) {
+                throw new Error("Session expired. Please reload.");
+            }
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || `API Error: ${response.status}`);
+            }
+
+            return response.json();
+        }
+
+        async function initGame() {
+            try {
+                // 1. Get User
+                const user = await fetchApi('/auth/me');
+                currentUser = user;
+                userGreeting.innerText = `Welcome ${user.name || 'Trader'}`;
+
+                // 2. Check Vote Status
+                const voteData = await fetchApi('/octopus/me/vote');
+                
+                if (voteData.voted) {
+                    hasVoted = true;
+                    showTicket(voteData);
+                    // If voted, show sentiment immediately
+                    fetchSentiment();
+                }
+
+                // 3. Get Leaderboard (Default Weekly)
+                fetchLeaderboard('weekly');
+
+                // 4. Get Scores
+                const scores = await fetchApi('/octopus/me/scores');
+                userWeekly.innerText = `${scores.weekly || 0} XP`;
+                userMonthly.innerText = `${scores.monthly || 0} XP`;
+
+                // 5. Hide Loader
+                loadingOverlay.classList.add('hidden');
+                updateUI();
+
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function fetchLeaderboard(type) {
+            try {
+                const endpoint = `/octopus/leaderboard/${type}?limit=10`;
+                const data = await fetchApi(endpoint);
+                renderLeaderboard(data);
+            } catch (e) {
+                console.error("Leaderboard error", e);
+            }
+        }
+
+        async function fetchSentiment() {
+            try {
+                const data = await fetchApi('/octopus/sentiment');
+                
+                // Fix: Allow 0 as a valid number. Only default to 50 if undefined/null.
+                const up = (typeof data.upPercent === 'number') ? data.upPercent : 50;
+                const down = (typeof data.downPercent === 'number') ? data.downPercent : 50;
+                
+                updateSentimentBar(up, down);
+            } catch (e) {
+                console.error("Sentiment error", e);
+            }
+        }
+
+        async function submitVote(direction) {
+            // Client-side guard check before API call
+            if (isDailyLock || isMarketWeekend) return;
+
+            try {
+                loadingOverlay.classList.remove('hidden');
+                
+                const response = await fetchApi('/octopus/vote', {
+                    method: 'POST',
+                    body: JSON.stringify({ direction })
+                });
+
+                hasVoted = true;
+                showTicket(response);
+                fetchSentiment(); // Reveal sentiment
+                
+                loadingOverlay.classList.add('hidden');
+                updateUI();
+
+            } catch (error) {
+                loadingOverlay.classList.add('hidden');
+                alert(error.message); // Likely 400 "Already voted"
+            }
+        }
+
+
+        // --- UI LOGIC ---
+
+        function checkMarketStatus() {
+            const now = new Date();
+            const day = now.getDay(); // 0=Sun, 6=Sat
+            const hour = now.getUTCHours(); // USE UTC AS PER DOCS
+
+            // Docs: Market Close 22:00 UTC Fri, Opens late Sun? 
+            // Docs say "Vote date: UTC date" and "Close: 22:00 UTC".
+            // Let's assume Weekends are closed for voting.
+            if (day === 0 || day === 6) {
+                isMarketWeekend = true;
+                isDailyLock = true;
+            } else {
+                isMarketWeekend = false;
+                // Voting closes typically before market settlement? 
+                // Let's keep the 14:00 (2pm) logic from previous request, assuming local/UTC alignment needs 
+                // but relying on API 400 error for ultimate truth. 
+                // NOTE: Prompt said "On open days user have to predict until 2 pm". 
+                // Assuming client-side 14:00 check.
+                const localHour = now.getHours();
+                if (localHour >= 14) {
+                    isDailyLock = true;
+                } else {
+                    isDailyLock = false;
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            // Do not run if still loading
+            if (!loadingOverlay.classList.contains('hidden')) return;
+
+            // Priority 1: Weekend Closed
+            if (isMarketWeekend) {
+                setInteractiveState(false);
+                statusBanner.style.display = 'block';
+                statusBanner.className = 'status-banner status-closed';
+                statusBanner.innerText = "MARKET CLOSED (WEEKEND)";
+                timerDisplay.classList.add('hidden');
+                btnChangeVote.classList.add('hidden');
+                return;
+            }
+
+            // Priority 2: Daily Lock (After 2 PM)
+            if (isDailyLock) {
+                setInteractiveState(false);
+                if (!hasVoted) {
+                    // Only show banner if they missed the vote
+                    statusBanner.style.display = 'block';
+                    statusBanner.className = 'status-banner status-locked';
+                    statusBanner.innerText = "PREDICTIONS LOCKED (AFTER 14:00)";
+                }
+                timerDisplay.classList.add('hidden');
+                btnChangeVote.classList.add('hidden');
+                return;
+            }
+
+            // Priority 3: Open Market
+            statusBanner.style.display = 'none';
+            timerDisplay.classList.remove('hidden');
+            
+            if (hasVoted) {
+                setInteractiveState(false); // Can't vote again
+                btnChangeVote.classList.remove('hidden'); // SHOW Change Vote
+            } else {
+                setInteractiveState(true); // Can vote
+                btnChangeVote.classList.add('hidden');
+            }
+        }
+
+        function setInteractiveState(canVote) {
+            if (canVote) {
+                gameDesc.style.display = 'block';
+                voteButtons.style.display = 'grid';
+                entryTicket.style.display = 'none';
+                priceScreen.style.display = 'block';
+            } else {
+                gameDesc.style.display = 'none';
+                voteButtons.style.display = 'none';
+                
+                // Keep ticket visible if voted
+                if (hasVoted) {
+                    entryTicket.style.display = 'block';
+                } else {
+                    entryTicket.style.display = 'none';
+                }
+            }
+        }
+
+        function resetApp() {
+            // Reset local UI state to allow attempting a new vote
+            hasVoted = false;
+            updateUI();
+        }
+
+        function showTicket(data) {
+            // Data shape from API: { direction, votePrice, voteDate, settled, closePrice... }
+            const dir = data.direction.toUpperCase();
+            
+            ticketDir.innerText = dir === 'UP' ? "▲ UP" : "▼ DOWN";
+            ticketDir.className = dir === 'UP' ? "entry-value entry-val-green" : "entry-value entry-val-red";
+            
+            ticketPrice.innerText = data.votePrice ? `$${data.votePrice}` : "PENDING";
+            
+            if (data.voteDate) {
+                const dateObj = new Date(data.voteDate);
+                // CHANGE: Show Time instead of Date
+                ticketTime.innerText = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+
+            if (data.settled) {
+                ticketStatus.innerText = data.points > 0 ? "WINNER (+1 XP)" : "MISSED";
+                ticketStatus.style.color = data.points > 0 ? "var(--btn-up-light)" : "#888";
+            } else {
+                ticketStatus.innerText = "OPEN / WAITING";
+                ticketStatus.style.color = "var(--accent-gold)";
+            }
+        }
+
+        function updateSentimentBar(up, down) {
+            sentimentWrapper.classList.remove('sentiment-locked');
+            barUp.style.width = `${up}%`;
+            barUp.innerText = `${Math.round(up)}%`;
+            barDown.style.width = `${down}%`;
+            barDown.innerText = `${Math.round(down)}%`;
+        }
+
+        function renderLeaderboard(data) {
+            lbBody.innerHTML = '';
+            
+            if (!data || data.length === 0) {
+                lbBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:10px; color:#555;">No Data</td></tr>';
+                return;
+            }
+
+            data.forEach((player, index) => {
+                const row = document.createElement('tr');
+                if (currentUser && player.userId === currentUser.id) {
+                    row.classList.add('my-rank');
+                }
+                
+                // Fallback for name/score
+                const pName = player.name || player.title || 'Unknown';
+                const pScore = player.totalPoints || 0;
+
+                row.innerHTML = `
+                    <td>${player.rank || index + 1}</td>
+                    <td>${pName}</td>
+                    <td class="score-col">${pScore}</td>
+                `;
+                lbBody.appendChild(row);
+            });
+        }
+
+        function switchTab(type) {
+            if (type === 'weekly') {
+                tabWeekly.classList.add('active');
+                tabMonthly.classList.remove('active');
+            } else {
+                tabMonthly.classList.add('active');
+                tabWeekly.classList.remove('active');
+            }
+            fetchLeaderboard(type);
+        }
+
+        function updateTimer() {
+            if (isMarketWeekend || isDailyLock) return;
+            const now = new Date();
+            const target = new Date();
+            target.setHours(14, 0, 0, 0);
+            let diff = target - now;
+            if (diff < 0) diff = 0;
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            timerDisplay.innerText = `TIME LEFT: ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+
+        function pad(n) { return n < 10 ? '0'+n : n; }
+
+        function showError(msg) {
+            loadingOverlay.classList.add('hidden');
+            errorOverlay.classList.remove('hidden');
+            errorMessage.innerText = msg;
+        }
+
+    </script>
+</body>
+</html>
