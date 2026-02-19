@@ -654,14 +654,25 @@
 
         // --- INITIALIZATION ---
         window.onload = async () => {
-            // 1. Get Token from URL
+            // 1. Try getting Token from URL
             const params = new URLSearchParams(window.location.search);
-            const token = params.get('token');
+            let token = params.get('token');
+
+            // 2. If not in URL, check Session Storage (Handles Refresh)
+            if (!token) {
+                token = sessionStorage.getItem('octopus_auth_token');
+            }
 
             if (token) {
                 authToken = token;
-                // Clean URL
-                window.history.replaceState({}, '', window.location.pathname);
+                
+                // Save to Session Storage for refreshes
+                sessionStorage.setItem('octopus_auth_token', token);
+
+                // Clean URL if token was in params
+                if (params.get('token')) {
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
                 
                 // Initialize Game
                 try {
